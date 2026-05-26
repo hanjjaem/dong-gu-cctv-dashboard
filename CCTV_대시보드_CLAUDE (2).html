@@ -1,0 +1,1475 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>동구 불법주정차 단속 CCTV 현황 대시보드</title>
+<meta name="viewport" content="width=1280" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root {
+    --c-cho: #2563eb;      /* 초량동 */
+    --c-su:  #10b981;      /* 수정동 */
+    --c-bum: #f59e0b;      /* 범일동 */
+    --c-bg: #f4f6fb;
+    --c-panel: #ffffff;
+    --c-border: #e5e7eb;
+    --c-border-soft: #eef0f4;
+    --c-text: #1f2937;
+    --c-muted: #6b7280;
+    --c-accent: #0b1a36;
+    /* 동구 브랜드 */
+    --dg-navy-deep: #061230;
+    --dg-navy:      #0b1f4f;
+    --dg-indigo:    #1e3a8a;
+    --dg-orange:    #ff6b1a;
+    --dg-orange-soft: #ff8a3d;
+    /* 글래스 */
+    --glass-bg:     rgba(255,255,255,0.10);
+    --glass-bg-hi:  rgba(255,255,255,0.18);
+    --glass-stroke: rgba(255,255,255,0.22);
+    --glass-text-soft: rgba(255,255,255,0.78);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Pretendard Variable","Pretendard","맑은 고딕","Malgun Gothic",
+      -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color: var(--c-text);
+    background:
+      radial-gradient(1200px 600px at -10% -20%, rgba(30,58,138,0.06), transparent 60%),
+      radial-gradient(900px 500px at 110% 120%, rgba(255,107,26,0.05), transparent 60%),
+      var(--c-bg);
+    font-size: 13px;
+    font-feature-settings: "ss01","ss02","case","cv01","cv02";
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: rgba(255,107,26,0.25); }
+  header {
+    position: relative;
+    height: 64px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 18px;
+    isolation: isolate;
+    background:
+      linear-gradient(135deg,
+        var(--dg-navy-deep) 0%,
+        var(--dg-navy) 35%,
+        var(--dg-indigo) 60%,
+        var(--dg-orange) 115%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 8px 28px -8px rgba(255,107,26,0.35),
+      0 18px 40px -20px rgba(11,31,79,0.5);
+  }
+  /* 글로우 오브 */
+  header::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(420px 140px at 12% 50%, rgba(120,170,255,0.28), transparent 65%),
+      radial-gradient(360px 140px at 88% 60%, rgba(255,140,60,0.32), transparent 65%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  /* 하단 빛띠 */
+  header::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    pointer-events: none;
+  }
+  header h1 {
+    font-size: 22px; margin: 0; font-weight: 700;
+    letter-spacing: -0.025em;
+    background: linear-gradient(180deg, #ffffff 0%, #ffe3cc 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 24px rgba(255,180,120,0.25);
+  }
+  header h1::before {
+    content: "";
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 12px; vertical-align: 2px;
+    background: radial-gradient(circle at 30% 30%, #ffd9b8, var(--dg-orange) 60%, #b03a00);
+    box-shadow:
+      0 0 0 2px rgba(255,107,26,0.25),
+      0 0 18px rgba(255,107,26,0.6);
+  }
+  header .meta {
+    color: var(--glass-text-soft);
+    font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 3px 9px; border-radius: 999px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-stroke);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  header .spacer { flex: 1; }
+  header .stat {
+    position: relative;
+    display: inline-flex; align-items: center;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 11.5px; font-weight: 500;
+    color: var(--glass-text-soft);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-stroke);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.15) inset,
+      0 6px 18px -8px rgba(0,0,0,0.35);
+    transition: background 0.2s, transform 0.15s;
+  }
+  header .stat:hover { background: var(--glass-bg-hi); transform: translateY(-1px); }
+  header .stat b {
+    font-size: 14.5px; margin-left: 8px; font-weight: 700;
+    color: #fff; letter-spacing: -0.01em;
+    text-shadow: 0 0 12px rgba(255,255,255,0.25);
+  }
+  /* 동별 stat 글로우 */
+  #stat-cho ~ * , #stat-cho { }
+  .stat[data-dong="cho"] b { color: #cfe0ff; text-shadow: 0 0 14px rgba(96,165,250,0.5); }
+  .stat[data-dong="su"]  b { color: #c8f5e1; text-shadow: 0 0 14px rgba(52,211,153,0.5); }
+  .stat[data-dong="bum"] b { color: #ffd9b8; text-shadow: 0 0 14px rgba(255,154,79,0.55); }
+
+  .app {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    height: calc(100vh - 64px);
+  }
+
+  /* === Left panel === */
+  .side {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.96) 100%);
+    border-right: 1px solid var(--c-border-soft);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: inset -1px 0 0 rgba(0,0,0,0.02);
+  }
+  .side .search {
+    position: relative;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid var(--c-border-soft);
+  }
+  .side .search::before {
+    content: "⌕";
+    position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
+    color: var(--c-muted); font-size: 14px; pointer-events: none;
+  }
+  .side .search input {
+    width: 100%;
+    padding: 9px 12px 9px 30px;
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    background: #fbfbfd;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .side .search input:focus {
+    border-color: var(--dg-orange);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(255,107,26,0.10);
+  }
+  .filters { padding: 10px 14px; border-bottom: 1px solid var(--c-border-soft); }
+  .filter-row { display: flex; align-items: center; gap: 6px; margin: 7px 0; flex-wrap: wrap; }
+  .filter-label {
+    font-size: 10.5px; color: var(--c-muted);
+    width: 40px; flex-shrink: 0;
+    font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .chip {
+    display: inline-flex; align-items: center;
+    padding: 4px 10px; border: 1px solid var(--c-border);
+    border-radius: 999px; background: #fff; cursor: pointer;
+    font-size: 11px; color: var(--c-text); user-select: none;
+    font-weight: 500;
+    transition: background 0.15s, color 0.15s, border-color 0.15s,
+                box-shadow 0.15s, transform 0.1s;
+  }
+  .chip:hover { background: #f6f7fb; border-color: #d1d5dc; }
+  .chip:active { transform: scale(0.97); }
+  .chip.on {
+    background: linear-gradient(180deg, #1a2942 0%, var(--c-accent) 100%);
+    color: #fff; border-color: var(--c-accent);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.15) inset,
+      0 4px 12px -4px rgba(11,26,54,0.5);
+  }
+  .chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px;
+    box-shadow: 0 0 0 1.5px rgba(255,255,255,0.6), 0 0 8px currentColor;
+  }
+  .reset-btn {
+    margin-left: auto; font-size: 11px; color: var(--c-muted);
+    background: none; border: none; cursor: pointer; padding: 3px 8px;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .reset-btn:hover { color: var(--dg-orange); background: rgba(255,107,26,0.08); }
+
+  .list-header {
+    padding: 10px 14px; font-size: 11px; color: var(--c-muted);
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--c-border-soft);
+    background: linear-gradient(180deg, rgba(244,246,251,0.6), transparent);
+  }
+  .list-header .count b {
+    color: var(--c-text); font-size: 12.5px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .list-header select {
+    border: 1px solid var(--c-border); border-radius: 6px; padding: 3px 8px;
+    font-size: 11px; background: #fff;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .list-header select:hover { border-color: #d1d5dc; }
+  .list { flex: 1; overflow-y: auto; padding: 6px 0; }
+  .item {
+    display: flex; gap: 11px; padding: 10px 14px;
+    cursor: pointer;
+    position: relative;
+    border-bottom: 1px solid var(--c-border-soft);
+    transition: background 0.15s;
+  }
+  .item::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: transparent;
+    transition: background 0.15s;
+  }
+  .item:hover { background: #f8f9fc; }
+  .item.active {
+    background: linear-gradient(90deg, rgba(255,107,26,0.06) 0%, transparent 80%);
+  }
+  .item.active::before {
+    background: linear-gradient(180deg, var(--dg-orange), var(--dg-orange-soft));
+    box-shadow: 0 0 12px rgba(255,107,26,0.5);
+  }
+  .item .num {
+    flex-shrink: 0; width: 30px; height: 30px;
+    border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.25) inset,
+      0 2px 6px -1px rgba(0,0,0,0.18);
+    letter-spacing: -0.02em;
+  }
+  .item .body { flex: 1; min-width: 0; }
+  .item .name { font-size: 12.5px; font-weight: 600; color: var(--c-text);
+                letter-spacing: -0.01em;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .addr { font-size: 11px; color: var(--c-muted); margin-top: 2px;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .tags { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10px; padding: 2px 7px; border-radius: 4px;
+    background: #eef0f4; color: #4b5563;
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  .tag.dome { background: linear-gradient(180deg, #fff7e3, #fde68a); color: #78350f; }
+  .tag.mobile { background: linear-gradient(180deg, #f3eeff, #ddd2ff); color: #5b21b6; }
+
+  /* === Map === */
+  .main { position: relative; }
+  #map { width: 100%; height: 100%; background: #e5e7eb; }
+
+  /* 베이스맵 선택기 */
+  .basemap-ctrl {
+    position: absolute; top: 20px; left: 20px;
+    z-index: 500;
+    display: flex; gap: 3px; padding: 4px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.85) inset,
+      0 10px 32px -10px rgba(11,26,54,0.25),
+      0 2px 8px -2px rgba(0,0,0,0.08);
+  }
+  .basemap-ctrl button {
+    border: none; background: transparent;
+    padding: 6px 12px; font-size: 11.5px;
+    font-family: inherit; font-weight: 600;
+    color: var(--c-muted); cursor: pointer;
+    border-radius: 7px; letter-spacing: -0.01em;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .basemap-ctrl button:hover { color: var(--c-text); background: rgba(0,0,0,0.04); }
+  .basemap-ctrl button:active { transform: scale(0.96); }
+  .basemap-ctrl button.on {
+    color: #fff;
+    background:
+      linear-gradient(180deg, var(--dg-orange-soft) 0%, var(--dg-orange) 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.3) inset,
+      0 2px 8px -2px rgba(255,107,26,0.55);
+  }
+  .legend {
+    position: absolute; bottom: 20px; left: 20px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    padding: 10px 13px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.8) inset,
+      0 10px 32px -10px rgba(11,26,54,0.25),
+      0 2px 8px -2px rgba(0,0,0,0.08);
+    font-size: 11px; z-index: 500; line-height: 1.7;
+  }
+  .legend .row { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+  .legend .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    box-shadow: 0 0 0 1.5px #fff, 0 0 10px currentColor;
+  }
+
+  /* 단속 범례 */
+  .heat-bar {
+    width: 160px; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg,
+      rgb(254,224,144) 0%,
+      rgb(253,174,97) 40%,
+      rgb(244,109,67) 70%,
+      rgb(165,15,21) 100%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset;
+  }
+  .heat-labels {
+    display: flex; justify-content: space-between;
+    font-size: 9.5px; color: var(--c-muted);
+    margin-top: 3px; width: 160px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 단속 집중도 모드 마커 */
+  .marker.viol {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.5) inset,
+      0 2px 8px rgba(0,0,0,0.32),
+      0 0 14px rgba(220,38,38,0.35);
+  }
+
+  /* 단속 통계 섹션 (상세 카드) */
+  .viol-section {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255,107,26,0.08), rgba(255,107,26,0.02));
+    border: 1px solid rgba(255,107,26,0.2);
+  }
+  .viol-section.empty {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.06);
+    color: var(--c-muted);
+    text-align: center;
+    font-size: 11.5px;
+    padding: 10px;
+  }
+  .viol-total {
+    font-size: 12px; color: var(--c-muted);
+    margin-bottom: 8px; font-weight: 500;
+  }
+  .viol-total b {
+    color: #dc2626; font-size: 18px; font-weight: 800;
+    letter-spacing: -0.02em; margin: 0 4px;
+  }
+  .viol-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .viol-row.mute { margin-top: 8px; }
+  .v-pill {
+    font-size: 10.5px; padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0.06);
+    color: var(--c-text);
+    font-weight: 500;
+  }
+  .v-pill b { color: var(--dg-orange); margin-left: 3px; font-weight: 700; }
+  .v-pill.match-1 { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.25); color: #065f46; }
+  .v-pill.match-1 b { color: #059669; }
+  .v-pill.match-2 { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.25); color: #78350f; }
+  .v-pill.match-2 b { color: #d97706; }
+  .v-pill.match-3 { background: rgba(220,38,38,0.10); border-color: rgba(220,38,38,0.25); color: #7f1d1d; }
+  .v-pill.match-3 b { color: #dc2626; }
+
+  /* === Detail card === */
+  .detail {
+    position: absolute; top: 20px; right: 20px;
+    width: 340px;
+    background: rgba(255,255,255,0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.9) inset,
+      0 20px 60px -20px rgba(11,26,54,0.35),
+      0 4px 12px -2px rgba(0,0,0,0.08);
+    z-index: 500; overflow: hidden;
+    display: none;
+    transform-origin: top right;
+    animation: pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .detail.show { display: block; }
+  .detail .head {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.4), transparent);
+  }
+  .detail .head .num {
+    width: 36px; height: 36px; border-radius: 50%;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: -0.02em;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.3) inset,
+      0 4px 12px -2px rgba(0,0,0,0.25),
+      0 0 0 3px rgba(255,255,255,0.6);
+  }
+  .detail .head .title { flex: 1; min-width: 0; }
+  .detail .head .title .name {
+    font-size: 14.5px; font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--c-accent);
+  }
+  .detail .head .title .dong {
+    font-size: 11px; color: var(--c-muted);
+    margin-top: 2px; font-weight: 500;
+  }
+  .detail .head .close {
+    background: rgba(0,0,0,0.04); border: none; cursor: pointer;
+    width: 26px; height: 26px; border-radius: 50%;
+    font-size: 15px; color: var(--c-muted); line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .detail .head .close:hover {
+    background: rgba(255,107,26,0.12); color: var(--dg-orange);
+  }
+  .detail .head .close:active { transform: scale(0.92); }
+  .detail .body { padding: 12px 16px; }
+  .detail .field {
+    display: flex; padding: 6px 0; font-size: 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .detail .field:last-child { border-bottom: none; }
+  .detail .field .k {
+    width: 76px; color: var(--c-muted);
+    flex-shrink: 0; font-weight: 500;
+    font-size: 11px; letter-spacing: 0.01em;
+  }
+  .detail .field .v {
+    flex: 1; color: var(--c-text);
+    font-weight: 500; letter-spacing: -0.01em;
+  }
+  .detail .actions {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    display: flex; gap: 6px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.015), transparent);
+  }
+  .detail .actions a {
+    flex: 1; text-align: center; font-size: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--c-border); border-radius: 8px;
+    color: var(--c-text); text-decoration: none;
+    background: rgba(255,255,255,0.7);
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .detail .actions a:hover {
+    background: var(--c-accent); color: #fff;
+    border-color: var(--c-accent);
+    box-shadow: 0 4px 12px -4px rgba(11,26,54,0.4);
+    transform: translateY(-1px);
+  }
+  /* 강조(primary) 버튼: 오렌지 그라데이션 + 글로우 */
+  .detail .actions a.primary {
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(180deg, var(--dg-orange-soft) 0%, var(--dg-orange) 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.35) inset,
+      0 0 0 1px rgba(255,107,26,0.4),
+      0 6px 18px -4px rgba(255,107,26,0.55),
+      0 2px 6px -2px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .detail .actions a.primary::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg,
+      transparent 30%,
+      rgba(255,255,255,0.35) 50%,
+      transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+  .detail .actions a.primary:hover {
+    background:
+      linear-gradient(180deg, #ff9a4f 0%, #ff7a2d 100%);
+    color: #fff;
+    border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.4) inset,
+      0 0 0 1px rgba(255,107,26,0.5),
+      0 8px 24px -4px rgba(255,107,26,0.7),
+      0 0 22px rgba(255,140,60,0.45),
+      0 2px 6px -2px rgba(0,0,0,0.18);
+  }
+  .detail .actions a.primary:hover::before { transform: translateX(100%); }
+  .detail .actions a.primary:active { transform: translateY(0); }
+
+  /* === Grid overlay === */
+  .grid-label-inner {
+    font-family: "Pretendard Variable","Pretendard",sans-serif;
+    font-size: 14px; font-weight: 800;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);
+    text-align: center;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    pointer-events: none;
+  }
+  .grid-label-inner.dark-text {
+    color: #1a1a2e;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+  }
+  .grid-label-inner small {
+    display: block; font-size: 9px; font-weight: 600;
+    opacity: 0.85; margin-top: 2px;
+  }
+  /* 구역 집계 범례 */
+  .legend#legend-grid .lg-title {
+    font-weight: 700; font-size: 11.5px; margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .legend#legend-grid .lg-row {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 500; line-height: 1.8;
+  }
+  .legend#legend-grid .lg-swatch {
+    width: 18px; height: 14px; border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .legend#legend-grid #grid-metric-btn:hover {
+    border-color: var(--dg-orange);
+    color: var(--dg-orange);
+  }
+
+  /* === Marker icon === */
+  .marker {
+    width: 30px; height: 30px; border-radius: 50%;
+    color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid #fff;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.4) inset,
+      0 2px 6px rgba(0,0,0,0.28),
+      0 0 0 1px rgba(0,0,0,0.05);
+    cursor: pointer;
+    letter-spacing: -0.02em;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s;
+  }
+  .marker:hover {
+    transform: scale(1.18);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.5) inset,
+      0 6px 14px rgba(0,0,0,0.32),
+      0 0 0 1px rgba(0,0,0,0.05);
+  }
+  .marker.active {
+    transform: scale(1.35);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.5) inset,
+      0 0 0 4px rgba(255,107,26,0.45),
+      0 0 22px rgba(255,107,26,0.55),
+      0 4px 12px rgba(0,0,0,0.3);
+  }
+  .marker.dome { border-style: double; border-width: 5px; }
+  .marker.mobile { border-style: dashed; }
+  /* 사용자가 위치를 수정한 마커 */
+  .marker.edited {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.45) inset,
+      0 0 0 2.5px var(--dg-orange),
+      0 0 14px rgba(255,107,26,0.55),
+      0 2px 6px rgba(0,0,0,0.28);
+  }
+  /* 편집 모드일 때 커서 */
+  body.editing #map { cursor: move; }
+  body.editing .marker { cursor: grab; }
+  body.editing .marker:active { cursor: grabbing; }
+
+  /* 도구 영역: 위치 편집 토글 + 수정 내역 정보 */
+  .chip.toggle.on {
+    background: linear-gradient(180deg, var(--dg-orange-soft) 0%, var(--dg-orange) 100%);
+    color: #fff; border-color: transparent;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.3) inset,
+      0 2px 8px -2px rgba(255,107,26,0.55);
+  }
+  .chip.toggle .pen { margin-right: 4px; font-size: 10px; }
+  .edits-info {
+    padding: 8px 14px;
+    font-size: 11px; color: var(--c-muted);
+    background: linear-gradient(90deg, rgba(255,107,26,0.06), transparent 80%);
+    border-bottom: 1px solid var(--c-border-soft);
+    display: none;
+    align-items: center; gap: 8px;
+  }
+  .edits-info.show { display: flex; }
+  .edits-info b { color: var(--dg-orange); font-weight: 700; font-size: 12px; }
+  .edits-info a {
+    color: var(--c-text); text-decoration: none;
+    padding: 2px 7px; border-radius: 5px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--c-border);
+    font-weight: 500; font-size: 10.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .edits-info a:hover { color: var(--dg-orange); border-color: var(--dg-orange); }
+  .edits-info a.primary {
+    color: #fff; font-weight: 700;
+    background: linear-gradient(180deg, var(--dg-orange-soft) 0%, var(--dg-orange) 100%);
+    border-color: transparent;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.3) inset,
+      0 2px 8px -2px rgba(255,107,26,0.55);
+  }
+  .edits-info a.primary:hover {
+    color: #fff; border-color: transparent;
+    background: linear-gradient(180deg, #ff9a4f 0%, #ff7a2d 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.4) inset,
+      0 4px 12px -2px rgba(255,107,26,0.7);
+    transform: translateY(-1px);
+  }
+  .edits-info .sep { color: #d1d5db; }
+
+  /* Scrollbar */
+  .list::-webkit-scrollbar { width: 8px; }
+  .list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #d1d5db, #b9bec7);
+    border-radius: 4px;
+    border: 2px solid #fff;
+    background-clip: padding-box;
+  }
+  .list::-webkit-scrollbar-thumb:hover { background: #9ca3af; background-clip: padding-box; }
+  .list::-webkit-scrollbar-track { background: transparent; }
+
+  /* Leaflet 컨트롤 폴리시 */
+  .leaflet-control-zoom a {
+    background: rgba(255,255,255,0.85) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.6) !important;
+    color: var(--c-accent) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px -4px rgba(11,26,54,0.2) !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: var(--c-accent) !important;
+    color: #fff !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(255,255,255,0.7) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 10px !important;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>동구 불법주정차 단속 CCTV 현황</h1>
+  <span class="meta">2026.4.17. 기준</span>
+  <div class="spacer"></div>
+  <span class="stat">전체<b id="stat-total">55</b></span>
+  <span class="stat" data-dong="cho">초량동<b id="stat-cho">-</b></span>
+  <span class="stat" data-dong="su">수정동<b id="stat-su">-</b></span>
+  <span class="stat" data-dong="bum">범일동<b id="stat-bum">-</b></span>
+</header>
+
+<div class="app">
+  <aside class="side">
+    <div class="search">
+      <input id="search" type="text" placeholder="지점명·주소 검색" autocomplete="off" />
+    </div>
+    <div class="filters">
+      <div class="filter-row">
+        <span class="filter-label">동</span>
+        <span class="chip filter" data-key="dong" data-val="초량동"><span class="dot" style="background:var(--c-cho)"></span>초량동</span>
+        <span class="chip filter" data-key="dong" data-val="수정동"><span class="dot" style="background:var(--c-su)"></span>수정동</span>
+        <span class="chip filter" data-key="dong" data-val="범일동"><span class="dot" style="background:var(--c-bum)"></span>범일동</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">유형</span>
+        <span class="chip filter" data-key="type" data-val="CCTV">일반</span>
+        <span class="chip filter" data-key="type" data-val="CCTV 보조돔">보조돔</span>
+        <span class="chip filter" data-key="type" data-val="CCTV(이동형)">이동형</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">업체</span>
+        <span class="chip filter" data-key="vendor" data-val="넥스파">넥스파</span>
+        <span class="chip filter" data-key="vendor" data-val="삼성 g2b">삼성 g2b</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">방향</span>
+        <span class="chip filter" data-key="direction" data-val="1">1</span>
+        <span class="chip filter" data-key="direction" data-val="2">2</span>
+        <span class="chip filter" data-key="direction" data-val="3">3</span>
+        <span class="chip filter" data-key="direction" data-val="4">4</span>
+        <button class="reset-btn" id="reset">초기화</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">도구</span>
+        <span class="chip toggle" id="edit-toggle"><span class="pen">✎</span>위치 편집</span>
+        <span class="chip toggle" id="viol-toggle">🔢 건수 버블</span>
+        <span class="chip toggle" id="heat-toggle">🔥 히트맵</span>
+        <span class="chip toggle" id="grid-toggle">📊 구역 집계</span>
+        <span class="chip toggle on" id="marker-toggle">📍 CCTV 위치</span>
+      </div>
+    </div>
+    <div class="edits-info" id="edits-info">
+      수정 <b id="edits-count">0</b>건
+      <span class="sep">·</span>
+      <a id="export-html" class="primary">HTML 내보내기</a>
+      <a id="export-edits">CSV</a>
+      <a id="reset-edits">초기화</a>
+    </div>
+    <div class="list-header">
+      <span class="count">표시 <b id="count">55</b>/55</span>
+      <select id="sort">
+        <option value="no">연번순</option>
+        <option value="installed-desc">최근 설치순</option>
+        <option value="installed-asc">오래된 설치순</option>
+        <option value="dong">동별</option>
+      </select>
+    </div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <main class="main">
+    <div id="map"></div>
+    <div class="basemap-ctrl" id="basemap-ctrl">
+      <button data-key="osm">표준</button>
+      <button data-key="positron">라이트</button>
+      <button data-key="satellite" class="on">위성</button>
+      <button data-key="dark">다크</button>
+    </div>
+    <div class="legend" id="legend-default">
+      <div class="row"><span class="dot" style="background:var(--c-cho)"></span>초량동</div>
+      <div class="row"><span class="dot" style="background:var(--c-su)"></span>수정동</div>
+      <div class="row"><span class="dot" style="background:var(--c-bum)"></span>범일동</div>
+      <div class="row" style="margin-top:4px;color:var(--c-muted);font-size:10px">테두리: 일반/보조돔(이중선)/이동형(점선)</div>
+    </div>
+    <div class="legend" id="legend-viol" style="display:none">
+      <div style="font-weight:600;font-size:11px;margin-bottom:6px">단속 건수</div>
+      <div class="heat-bar"></div>
+      <div class="heat-labels">
+        <span>0</span><span>~100</span><span>~1,000</span><span id="heat-max">~5,000</span>
+      </div>
+      <div class="row" style="margin-top:6px;color:var(--c-muted);font-size:10px">마커 크기·색상이 건수에 비례</div>
+    </div>
+    <div class="legend" id="legend-grid" style="display:none">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span class="lg-title" style="margin:0" id="legend-grid-title">구역별 단속 건수</span>
+        <button id="grid-metric-btn" style="
+          margin-left:auto; font-size:10px; padding:3px 8px;
+          border:1px solid var(--c-border); border-radius:5px;
+          background:#fff; cursor:pointer; font-family:inherit; font-weight:600;
+          color:var(--c-muted); transition:all 0.15s;
+        ">▶ 대당 평균 보기</button>
+      </div>
+      <div id="legend-grid-rows"></div>
+      <div style="margin-top:6px;color:var(--c-muted);font-size:10px">~350m 격자 기준 집계</div>
+    </div>
+    <div class="detail" id="detail">
+      <div class="head">
+        <div class="num" id="d-num"></div>
+        <div class="title">
+          <div class="name" id="d-name"></div>
+          <div class="dong" id="d-dong"></div>
+        </div>
+        <button class="close" id="d-close">×</button>
+      </div>
+      <div class="body" id="d-body"></div>
+      <div class="actions">
+        <a id="d-roadview" class="primary" target="_blank" rel="noopener">로드뷰 보기</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+const BUILD_ID = '/*<BUILD-START>*/v1/*<BUILD-END>*/';
+const STORAGE_KEY = 'cctv-overrides-' + BUILD_ID;
+let overrides = {};
+try { overrides = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { overrides = {}; }
+let editMode = false;
+
+const VIOLATIONS = /*<VIOL-START>*/{"11":{"matchMethods":{"2_부분포함":901},"total":901,"violations":{"소방시설 주변":6,"주정차 금지구역":895}},"41":{"matchMethods":{"1_완전일치":4,"3_유사도":554},"total":558,"violations":{"주정차 금지구역":538,"어린이 보호구역":20}},"42":{"matchMethods":{"1_완전일치":500},"total":500,"violations":{"주정차 금지구역":500}},"45":{"matchMethods":{"1_완전일치":1402,"3_유사도":3},"total":1405,"violations":{"주정차 금지구역":1405}},"20":{"matchMethods":{"1_완전일치":260,"2_부분포함":7},"total":267,"violations":{"주정차 금지구역":267}},"54":{"matchMethods":{"3_유사도":87},"total":87,"violations":{"주정차 금지구역":87}},"23":{"matchMethods":{"1_완전일치":890,"3_유사도":9},"total":899,"violations":{"소방시설 주변":4,"주정차 금지구역":895}},"51":{"matchMethods":{"1_완전일치":492,"3_유사도":15},"total":507,"violations":{"소방시설 주변":9,"주정차 금지구역":498}},"44":{"matchMethods":{"1_완전일치":25,"2_부분포함":2,"3_유사도":9},"total":36,"violations":{"주정차 금지구역":36}},"13":{"matchMethods":{"1_완전일치":62},"total":62,"violations":{"주정차 금지구역":62}},"43":{"matchMethods":{"1_완전일치":775},"total":775,"violations":{"소방시설 주변":6,"주정차 금지구역":769}},"30":{"matchMethods":{"2_부분포함":24,"3_유사도":33},"total":57,"violations":{"주정차 금지구역":50,"어린이 보호구역":7}},"5":{"matchMethods":{"1_완전일치":220},"total":220,"violations":{"주정차 금지구역":220}},"18":{"matchMethods":{"1_완전일치":528,"2_부분포함":62,"3_유사도":73},"total":663,"violations":{"주정차 금지구역":661,"어린이 보호구역":2}},"37":{"matchMethods":{"1_완전일치":307,"2_부분포함":4,"3_유사도":5},"total":316,"violations":{"소방시설 주변":3,"주정차 금지구역":313}},"1":{"matchMethods":{"1_완전일치":517,"2_부분포함":5},"total":522,"violations":{"소방시설 주변":39,"주정차 금지구역":483}},"7":{"matchMethods":{"3_유사도":35},"total":35,"violations":{"주정차 금지구역":35}},"29":{"matchMethods":{"1_완전일치":153},"total":153,"violations":{"주정차 금지구역":139,"어린이 보호구역":14}},"34":{"matchMethods":{"1_완전일치":71},"total":71,"violations":{"주정차 금지구역":71}},"36":{"matchMethods":{"2_부분포함":81},"total":81,"violations":{"주정차 금지구역":76,"어린이 보호구역":5}},"38":{"matchMethods":{"1_완전일치":70},"total":70,"violations":{"주정차 금지구역":69,"어린이 보호구역":1}},"27":{"matchMethods":{"1_완전일치":16},"total":16,"violations":{"주정차 금지구역":16}},"49":{"matchMethods":{"1_완전일치":4852},"total":4852,"violations":{"소방시설 주변":174,"주정차 금지구역":4678}},"52":{"matchMethods":{"1_완전일치":924},"total":924,"violations":{"주정차 금지구역":924}},"47":{"matchMethods":{"3_유사도":322},"total":322,"violations":{"주정차 금지구역":322}},"40":{"matchMethods":{"1_완전일치":117},"total":117,"violations":{"주정차 금지구역":117}},"24":{"matchMethods":{"1_완전일치":781,"3_유사도":9},"total":790,"violations":{"주정차 금지구역":790}},"32":{"matchMethods":{"1_완전일치":49},"total":49,"violations":{"주정차 금지구역":42,"어린이 보호구역":7}},"3":{"matchMethods":{"1_완전일치":374,"3_유사도":19},"total":393,"violations":{"소방시설 주변":2,"주정차 금지구역":389,"어린이 보호구역":2}},"14":{"matchMethods":{"1_완전일치":725},"total":725,"violations":{"주정차 금지구역":725}},"53":{"matchMethods":{"3_유사도":796},"total":796,"violations":{"주정차 금지구역":625,"어린이 보호구역":171}},"46":{"matchMethods":{"1_완전일치":308},"total":308,"violations":{"주정차 금지구역":239,"어린이 보호구역":69}},"28":{"matchMethods":{"1_완전일치":270,"3_유사도":1},"total":271,"violations":{"주정차 금지구역":248,"어린이 보호구역":23}},"4":{"matchMethods":{"1_완전일치":99,"3_유사도":7},"total":106,"violations":{"주정차 금지구역":106}},"25":{"matchMethods":{"1_완전일치":1238},"total":1238,"violations":{"주정차 금지구역":1238}},"33":{"matchMethods":{"1_완전일치":292,"3_유사도":36},"total":328,"violations":{"주정차 금지구역":311,"어린이 보호구역":17}},"9":{"matchMethods":{"1_완전일치":3412},"total":3412,"violations":{"소방시설 주변":32,"주정차 금지구역":3380}},"39":{"matchMethods":{"1_완전일치":484},"total":484,"violations":{"주정차 금지구역":484}},"21":{"matchMethods":{"1_완전일치":44,"3_유사도":4},"total":48,"violations":{"주정차 금지구역":41,"어린이 보호구역":7}},"19":{"matchMethods":{"1_완전일치":875},"total":875,"violations":{"소방시설 주변":5,"주정차 금지구역":870}},"26":{"matchMethods":{"1_완전일치":398,"3_유사도":23},"total":421,"violations":{"주정차 금지구역":421}},"35":{"matchMethods":{"1_완전일치":77},"total":77,"violations":{"주정차 금지구역":77}},"8":{"matchMethods":{"3_유사도":8,"2_부분포함":584,"1_완전일치":336},"total":928,"violations":{"소방시설 주변":4,"주정차 금지구역":924}},"48":{"matchMethods":{"3_유사도":2312},"total":2312,"violations":{"소방시설 주변":77,"주정차 금지구역":2235}},"2":{"matchMethods":{"1_완전일치":201},"total":201,"violations":{"주정차 금지구역":201}},"50":{"matchMethods":{"1_완전일치":1563,"2_부분포함":51,"3_유사도":32},"total":1646,"violations":{"주정차 금지구역":1646}},"6":{"matchMethods":{"3_유사도":1221},"total":1221,"violations":{"소방시설 주변":20,"주정차 금지구역":1201}},"31":{"matchMethods":{"2_부분포함":67},"total":67,"violations":{"주정차 금지구역":67}}}/*<VIOL-END>*/;
+
+const DATA =/*<DATA-START>*/[{"lat":35.1168811,"note":"","changedDate":"2019-06","direction":3,"installed":"2006-03","no":1,"dong":"초량동","location":"국민은행 초량지점 앞","type":"CCTV","changedType":"교체설치","lng":129.0405848,"vendor":"넥스파","mapName":"국민은행 초량지점 앞","address":"초량동 375"},{"lat":35.11612,"note":"부산역 앞 24시간 단속(2분)","changedDate":"2019-06","direction":2,"installed":"2006-03","no":2,"dong":"초량동","location":"교원아카데미 앞","type":"CCTV","changedType":"교체설치","lng":129.0403094,"vendor":"넥스파","mapName":"부산역 교원아카데미 앞","address":"초량동 1199-9"},{"lat":35.1301409,"note":"","changedDate":"2019-06","direction":4,"installed":"2006-03","no":3,"dong":"수정동","location":"부산진세무서 앞 사거리","type":"CCTV","changedType":"교체설치","lng":129.047737,"vendor":"넥스파","mapName":"부산진세무서 앞 사거리","address":"수정동 247-17"},{"lat":35.1391367,"note":"","changedDate":"2018-04","direction":3,"installed":"2006-03","no":4,"dong":"범일동","location":"불교방송 앞","type":"CCTV","changedType":"교체설치","lng":129.0595041,"vendor":"넥스파","mapName":"범일동 불교방송 앞","address":"범일로 102"},{"lat":35.1148707,"note":"부산역 앞 24시간 단속(2분)","changedDate":"2020-03","direction":2,"installed":"2008-05","no":5,"dong":"초량동","location":"뉴포트빌딩 앞","type":"CCTV","changedType":"교체설치","lng":129.039451,"vendor":"넥스파","mapName":"초량동 뉴포트빌딩 앞","address":"중앙대로 197"},{"lat":35.1188661,"note":"","changedDate":"2023-10","direction":4,"installed":"2014-05","no":6,"dong":"초량동","location":"동구다문화가족지원센터 주변","type":"CCTV","changedType":"교체설치","lng":129.0421984,"vendor":"삼성 g2b","mapName":"초량동 동구다문화가족지원센터 앞","address":"초량동 1192"},{"lat":35.1380158,"note":"","changedDate":"2023-03","direction":2,"installed":"2015-09","no":7,"dong":"범일동","location":"새마을금고 본점 앞","type":"CCTV","changedType":"교체설치","lng":129.0563503,"vendor":"삼성 g2b","mapName":"범일동 새마을금고 본점 앞","address":"중앙대로 501-1"},{"lat":35.1380259,"note":"","changedDate":"2023-12","direction":3,"installed":"2016-09","no":8,"dong":"범일동","location":"범일동 부산은행 뒤","type":"CCTV","changedType":"교체설치","lng":129.0598374,"vendor":"삼성 g2b","mapName":"범일동 부산은행 뒤","address":"범일로 92"},{"lat":35.1160384,"note":"","changedDate":"2024-12","direction":4,"installed":"2016-09","no":9,"dong":"초량동","location":"부산역 광장빌딩 앞","type":"CCTV","changedType":"교체설치","lng":129.0413466,"vendor":"삼성 g2b","mapName":"초량동 광장빌딩 앞","address":"중앙대로214번길 3-2"},{"lat":35.1144377,"note":"","changedDate":"2024-12","direction":2,"installed":"2016-09","no":10,"dong":"초량동","location":"부산역 뒤 부산항운노동조합 앞","type":"CCTV","changedType":"교체설치","lng":129.0430859,"vendor":"삼성 g2b","mapName":"부산역 뒤편 부산항운노동조합 앞","address":"충장대로 127"},{"lat":35.1379463,"note":"","changedDate":"2024-12","direction":3,"installed":"2017-07","no":11,"dong":"범일동","location":"국제호텔 맞은편","type":"CCTV","changedType":"교체설치","lng":129.0613384,"vendor":"삼성 g2b","mapName":"범일동 국제호텔 맞은편","address":"범일로90번길 16"},{"lat":35.1391202,"note":"","changedDate":"2025-06","direction":3,"installed":"2017-07","no":12,"dong":"범일동","location":"세종빌딩 앞(세종회관)","type":"CCTV","changedType":"교체설치","lng":129.0606713,"vendor":"넥스파","mapName":"범일동 세종빌딩 앞","address":"범일로102번길 9"},{"lat":35.1279921,"note":"","changedDate":"2025-06","direction":2,"installed":"2018-02","no":13,"dong":"수정동","location":"범석심인당 옆","type":"CCTV","changedType":"교체설치","lng":129.0453057,"vendor":"넥스파","mapName":"범석심인당 옆","address":"구청로 19"},{"lat":35.129419,"note":"","changedDate":"","direction":4,"installed":"2018-02","no":14,"dong":"수정동","location":"동구보건소 맞은편","type":"CCTV","changedType":"","lng":129.0445927,"vendor":"넥스파","mapName":"동구 보건소 주변","address":"수정동 812-16"},{"lat":35.1380664,"note":"","changedDate":"2018-04","direction":3,"installed":"2010-09","no":15,"dong":"범일동","location":"부산은행 앞(범일로 92)","type":"CCTV","changedType":"교체설치","lng":129.0595047,"vendor":"넥스파","mapName":"범일동 부산은행 앞","address":"범일로 92"},{"lat":35.1402064,"note":"","changedDate":"2018-04","direction":2,"installed":"2010-09","no":16,"dong":"범일동","location":"부산진소방서 앞","type":"CCTV","changedType":"교체설치","lng":129.0593495,"vendor":"넥스파","mapName":"부산진소방서 앞","address":"범일로 113"},{"lat":35.1284775,"note":"","changedDate":"2018-04","direction":2,"installed":"2011-02","no":17,"dong":"수정동","location":"부산진역 앞","type":"CCTV","changedType":"교체설치","lng":129.0487039,"vendor":"넥스파","mapName":"부산진역 앞","address":"수정동 79-711"},{"lat":35.1286476,"note":"","changedDate":"2018-04","direction":2,"installed":"2011-02","no":18,"dong":"수정동","location":"부산일보 앞","type":"CCTV","changedType":"교체설치","lng":129.048729,"vendor":"넥스파","mapName":"부산일보 앞","address":"중앙대로 373"},{"lat":35.1141835,"note":"","changedDate":"","direction":2,"installed":"2018-12","no":19,"dong":"초량동","location":"부산역 풍물거리 입구","type":"CCTV","changedType":"","lng":129.0410534,"vendor":"넥스파","mapName":"초량동 풍물거리 입구","address":"초량동 1202"},{"lat":35.1371849,"note":"","changedDate":"","direction":4,"installed":"2019-07","no":20,"dong":"범일동","location":"부산진시장 주변","type":"CCTV","changedType":"","lng":129.0588179,"vendor":"넥스파","mapName":"부산진시장 주변","address":"범일동 640-28"},{"lat":35.137215,"note":"","changedDate":"","direction":3,"installed":"2019-11","no":21,"dong":"범일동","location":"부산진시장 앞 교통섬","type":"CCTV","changedType":"","lng":129.0592986,"vendor":"넥스파","mapName":"부산진시장 앞 교통섬","address":"범일동 633-26"},{"lat":35.1136986,"note":"","changedDate":"","direction":1,"installed":"2020-04","no":22,"dong":"초량동","location":"부산역 풍물거리","type":"CCTV 보조돔","changedType":"","lng":129.0390809,"vendor":"넥스파","mapName":"부산역 풍물거리(보조돔)","address":"초량동 1202"},{"lat":35.1234946,"note":"","changedDate":"","direction":4,"installed":"2019-12","no":23,"dong":"초량동","location":"초량119안전센터 앞","type":"CCTV","changedType":"","lng":129.0456128,"vendor":"넥스파","mapName":"초량119안전센터 앞","address":"초량동 1170"},{"lat":35.1165375,"note":"","changedDate":"","direction":4,"installed":"2019-12","no":24,"dong":"초량동","location":"초량2동행정복지센터","type":"CCTV","changedType":"","lng":129.0379973,"vendor":"넥스파","mapName":"초량2동 주민센터 주변","address":"초량동 1043-1"},{"lat":35.1162749,"note":"","changedDate":"","direction":4,"installed":"2019-12","no":25,"dong":"초량동","location":"옛 백제병원 주변","type":"CCTV","changedType":"","lng":129.0388709,"vendor":"넥스파","mapName":"옛 백제병원 주변","address":"초량동 460-2"},{"lat":35.115332,"note":"","changedDate":"","direction":4,"installed":"2019-12","no":26,"dong":"초량동","location":"부산화교중고등학교","type":"CCTV","changedType":"","lng":129.0389434,"vendor":"넥스파","mapName":"부산화교중고등학교","address":"초량동 1100-1"},{"lat":35.121872,"note":"","changedDate":"2021-07","direction":3,"installed":"2020-06","no":27,"dong":"초량동","location":"범양레우스 104동(오피스텔)","type":"CCTV","changedType":"이전","lng":129.042815,"vendor":"넥스파","mapName":"범양레우스 104동 주변","address":"초량동 1147-2"},{"lat":35.1213399,"note":"","changedDate":"2021-07","direction":4,"installed":"2020-07","no":28,"dong":"초량동","location":"범양레우스아파트 102동","type":"CCTV","changedType":"이전","lng":129.0407246,"vendor":"넥스파","mapName":"범양레우스 102동 주변","address":"초량동 1226"},{"lat":35.1164754,"note":"","changedDate":"","direction":3,"installed":"2020-05","no":29,"dong":"초량동","location":"초량초등학교 주변","type":"CCTV","changedType":"","lng":129.0370005,"vendor":"넥스파","mapName":"초량초등학교","address":"초량동 994-12"},{"lat":35.1349723,"note":"","changedDate":"","direction":2,"installed":"2020-07","no":30,"dong":"범일동","location":"성남초등학교 주변","type":"CCTV 보조돔","changedType":"","lng":129.0589679,"vendor":"넥스파","mapName":"성남초등학교 주변(보조돔)","address":"범일로 53번길14"},{"lat":35.1273697,"note":"","changedDate":"","direction":3,"installed":"2020-10","no":31,"dong":"수정동","location":"수정동 우체국주변","type":"CCTV","changedType":"","lng":129.0460086,"vendor":"넥스파","mapName":"수정동우체국 주변","address":"수정동 143-1 주변"},{"lat":35.1320808,"note":"","changedDate":"","direction":3,"installed":"2020-11","no":32,"dong":"수정동","location":"수정초등학교 뒷편","type":"CCTV","changedType":"","lng":129.0461265,"vendor":"넥스파","mapName":"수정초등학교뒷편","address":"동구 수정동 464-2"},{"lat":35.1297298,"note":"","changedDate":"","direction":2,"installed":"2021-02","no":33,"dong":"수정동","location":"동구청 부산은행 영업소","type":"CCTV 보조돔","changedType":"","lng":129.0455302,"vendor":"넥스파","mapName":"동구청 부산은행 영업소 주변","address":"동구 구청로 1"},{"lat":35.1258435,"note":"","changedDate":"","direction":3,"installed":"2021-02","no":34,"dong":"초량동","location":"메리츠화재 주변","type":"CCTV","changedType":"","lng":129.0445993,"vendor":"넥스파","mapName":"초량동 1143-1 메리츠타워 주변","address":"동구 초량동1143-1 "},{"lat":35.1261154,"note":"","changedDate":"","direction":1,"installed":"2021-02","no":35,"dong":"수정동","location":"파라바게트 수정점","type":"CCTV 보조돔","changedType":"","lng":129.0445074,"vendor":"넥스파","mapName":"수정동 97-1 파리바게뜨 맞은편","address":"동구 수정동 97-1"},{"lat":35.123045,"note":"","changedDate":"","direction":4,"installed":"2021-08","no":36,"dong":"초량동","location":"초량베스티움 아파트 주변","type":"CCTV","changedType":"","lng":129.039603,"vendor":"넥스파","mapName":"초량 베스티움 아파트 주변","address":"초량동 632-2"},{"lat":35.121731,"note":"","changedDate":"","direction":4,"installed":"2021-09","no":37,"dong":"초량동","location":"로미오와 줄리엣 인근","type":"CCTV","changedType":"","lng":129.044481,"vendor":"삼성 g2b","mapName":"초량 로미오와줄리엣 아파트 주변","address":"중앙대로286번길 9"},{"lat":35.121473,"note":"","changedDate":"","direction":4,"installed":"2021-11","no":38,"dong":"초량동","location":"초량3동행정복지센터","type":"CCTV","changedType":"","lng":129.0397737,"vendor":"넥스파","mapName":"초량3동 행정복지센터 주변","address":"초량상로 112"},{"lat":35.1156741,"note":"","changedDate":"","direction":4,"installed":"2021-11","no":39,"dong":"초량동","location":"초량 협성마리나 G7(1)(국제여객터미널방향)","type":"CCTV","changedType":"","lng":129.0459135,"vendor":"삼성 g2b","mapName":"초량동 협성마리나 G7 주변 1","address":"충장대로 160"},{"lat":35.1158654,"note":"","changedDate":"","direction":4,"installed":"2021-11","no":40,"dong":"초량동","location":"초량 협성마리나 G7(2)(부산역선상주차장방향)","type":"CCTV","changedType":"","lng":129.0447228,"vendor":"삼성 g2b","mapName":"초량동 협성마리나 G7 주변 2","address":"부산광역시 동구 충장대로 160"},{"lat":35.1139228,"note":"","changedDate":"","direction":4,"installed":"2022-01","no":41,"dong":"초량동","location":"부산역삼정그린코아 더시티","type":"CCTV","changedType":"","lng":129.0375346,"vendor":"넥스파","mapName":"초량동 삼정그린코아 주변","address":"중앙대로179번길 27"},{"lat":35.1204137,"note":"","changedDate":"2026-04","direction":3,"installed":"2022-04","no":42,"dong":"초량동","location":"초량불백거리","type":"CCTV","changedType":"렌즈교체","lng":129.0384641,"vendor":"삼성 g2b","mapName":"초량 불백거리","address":"부산광역시 동구 초량로 37"},{"lat":35.1202896,"note":"","changedDate":"","direction":4,"installed":"2022-04","no":43,"dong":"초량동","location":"초량육거리","type":"CCTV","changedType":"","lng":129.0388777,"vendor":"삼성 g2b","mapName":"초량 육거리","address":"부산광역시 동구 초량로 36"},{"lat":35.1282,"note":"이동형","changedDate":"","direction":2,"installed":"2022-06","no":44,"dong":"범일동","location":"성남로 26 미진상사 앞","type":"CCTV(이동형)","changedType":"","lng":129.0548,"vendor":"삼성 g2b","mapName":"미진상사 앞","address":"부산광역시 동구 성남로 24"},{"lat":35.116684,"note":"","changedDate":"","direction":2,"installed":"2023-05","no":45,"dong":"초량동","location":"선상주차장 진입로 입구(충장대로)","type":"CCTV","changedType":"","lng":129.044473,"vendor":"삼성 g2b","mapName":"선상주차장 진입로 입구(충장대로)","address":"부산광역시 동구 충장대로 153 앞"},{"lat":35.130723,"note":"","changedDate":"2024-02","direction":3,"installed":"2023-12","no":46,"dong":"수정동","location":"수정동로 30-1 앞 수정초등학교 정문 주변","type":"CCTV 보조돔","changedType":"단속개시","lng":129.046543,"vendor":"삼성 g2b","mapName":"수정초등학교 정문 주변","address":"부산 동구 수정동로 30-1"},{"lat":35.130737,"note":"","changedDate":"2024-02","direction":3,"installed":"2023-12","no":47,"dong":"수정동","location":"수정중로 28 앞 경남여고 후문 통학로","type":"CCTV 보조돔","changedType":"단속개시","lng":129.044676,"vendor":"삼성 g2b","mapName":"경남여고 통학로 주변","address":"부산 동구 수정중로 28"},{"lat":35.116719,"note":"","changedDate":"2024-04","direction":3,"installed":"2024-03","no":48,"dong":"초량동","location":"아스티오피스텔 주변(중앙대로226번길 11 주변)","type":"CCTV 보조돔","changedType":"단속개시","lng":129.04231,"vendor":"삼성 g2b","mapName":"아스티부산 오피스텔 주변","address":"부산 동구 중앙대로226번길 11"},{"lat":35.140641,"note":"단속유예 11:30~14:00 및 17:00~20:00","changedDate":"2024-08","direction":4,"installed":"2024-04","no":49,"dong":"범일동","location":"봄여름가을겨울아파트 앞(자성로133번길 46)","type":"CCTV","changedType":"단속개시","lng":129.0629175,"vendor":"삼성 g2b","mapName":"봄여름가을겨울 아파트 주변","address":"부산광역시 동구 자성로133번길 46"},{"lat":35.1389571,"note":"단속유예 11:30~14:00 및 17:00~20:00","changedDate":"2024-08","direction":4,"installed":"2024-04","no":50,"dong":"범일동","location":"부산시민회관 앞 사거리(조방로16번길 20 주변)","type":"CCTV 보조돔","changedType":"단속개시","lng":129.0644301,"vendor":"삼성 g2b","mapName":"부산시민회관 주변","address":"부산광역시 동구 조방로16번길 20"},{"lat":35.1329237,"note":"","changedDate":"2024-11","direction":4,"installed":"2024-10","no":51,"dong":"범일동","location":"하버시티아파트 103동 앞(성남이로37번길 2 주변)","type":"CCTV","changedType":"단속개시","lng":129.0568869,"vendor":"삼성 g2b","mapName":"범일동 하버시티아파트 103동 앞","address":"부산광역시 동구 성남이로37번길 2"},{"lat":35.125454,"note":"","changedDate":"","direction":4,"installed":"2025-03","no":52,"dong":"초량동","location":"화물운송사업협회 앞(중앙대로332번길 9)","type":"CCTV","changedType":"","lng":129.0464488,"vendor":"삼성 g2b","mapName":"부산광역시화물자동차운송사업협회","address":"중앙대로332번길 9"},{"lat":35.13062,"note":"","changedDate":"","direction":3,"installed":"2025-12","no":53,"dong":"수정동","location":"좌천동 홈플러스 맞은 편(고관로 144 앞)","type":"CCTV","changedType":"","lng":129.04886,"vendor":"삼성 g2b","mapName":"좌천동 홈플러스 맞은 편","address":"동구 고관로 144 앞"},{"lat":35.129053,"note":"","changedDate":"","direction":2,"installed":"2025-12","no":54,"dong":"수정동","location":"국민체육센터 공영주차장 출구(수정중로6번길 7)","type":"CCTV 보조돔","changedType":"","lng":129.044227,"vendor":"넥스파","mapName":"수정동 국민체육센터 공영주차장 출구 앞","address":"수정중로6번길 7"},{"lat":35.1282014,"note":"","changedDate":"2026-04-17","direction":3,"installed":"2026-04","no":55,"dong":"수정동","location":"해양수산부 정문 앞","type":"CCTV 보조돔","changedType":"단속개시","lng":129.047321,"vendor":"삼성 g2b","mapName":"해양수산부 정문 앞","address":"중앙대로361번길 일원"}]/*<DATA-END>*/;
+
+const DONG_COLOR = { "초량동": "#2563eb", "수정동": "#10b981", "범일동": "#f59e0b" };
+const filters = { dong: new Set(), type: new Set(), vendor: new Set(), direction: new Set() };
+let searchTerm = "";
+let sortKey = "no";
+let activeId = null;
+
+const map = L.map('map', { zoomControl: false, attributionControl: true })
+  .setView([35.128, 129.048], 14);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+const BASEMAPS = {
+  osm: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+  positron: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 20,
+    subdomains: 'abcd',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 19,
+    labelsUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 20,
+    subdomains: 'abcd',
+  },
+};
+
+let baseLayer = null, labelLayer = null;
+function setBasemap(key) {
+  const b = BASEMAPS[key];
+  if (!b) return;
+  if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
+  if (labelLayer) { map.removeLayer(labelLayer); labelLayer = null; }
+  const opts = { attribution: b.attribution, maxZoom: b.maxZoom };
+  if (b.subdomains) opts.subdomains = b.subdomains;
+  baseLayer = L.tileLayer(b.url, opts).addTo(map);
+  if (b.labelsUrl) {
+    labelLayer = L.tileLayer(b.labelsUrl, { maxZoom: b.maxZoom, pane: 'shadowPane' }).addTo(map);
+  }
+  document.querySelectorAll('.basemap-ctrl button').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.key === key);
+  });
+}
+setBasemap('satellite');
+document.querySelectorAll('.basemap-ctrl button').forEach(btn => {
+  btn.addEventListener('click', () => setBasemap(btn.dataset.key));
+});
+
+// 원본 좌표 보관 + 저장된 수정 좌표 적용
+DATA.forEach(d => {
+  d._origLat = d.lat;
+  d._origLng = d.lng;
+  if (overrides[d.no]) {
+    d.lat = overrides[d.no].lat;
+    d.lng = overrides[d.no].lng;
+  }
+});
+
+let violMode = false;
+const VIOL_MAX = Math.max(...Object.values(VIOLATIONS).map(v => v.total || 0), 1);
+
+// 히트맵 레이어 생성 (초기에는 비표시)
+const heatPoints = DATA.map(d => {
+  const count = (VIOLATIONS[d.no] && VIOLATIONS[d.no].total) || 0;
+  return [d.lat, d.lng, count];
+}).filter(p => p[2] > 0);
+const heatLayer = L.heatLayer(heatPoints, {
+  radius: 40,
+  blur: 30,
+  minOpacity: 0.4,
+  maxZoom: 16,
+  max: VIOL_MAX,
+  gradient: { 0.2: '#fee090', 0.4: '#fdae61', 0.6: '#f46d43', 0.8: '#d73027', 1.0: '#a50f15' }
+});
+
+// 위반 건수 → heat color (낮음=노랑, 중간=주황, 높음=진빨강)
+function heatColor(count) {
+  if (!count) return '#cbd5e1';
+  const t = Math.log(count + 1) / Math.log(VIOL_MAX + 1);
+  const stops = [
+    { t: 0.0, rgb: [254, 224, 144] },
+    { t: 0.4, rgb: [253, 174, 97]  },
+    { t: 0.7, rgb: [244, 109, 67]  },
+    { t: 1.0, rgb: [165, 15, 21]   },
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i].t && t <= stops[i+1].t) {
+      const r = (t - stops[i].t) / (stops[i+1].t - stops[i].t);
+      const c = stops[i].rgb.map((v, k) => Math.round(v + (stops[i+1].rgb[k] - v) * r));
+      return `rgb(${c.join(',')})`;
+    }
+  }
+  return `rgb(${stops[stops.length-1].rgb.join(',')})`;
+}
+
+function fmtCount(n) {
+  if (!n) return '·';
+  if (n < 1000) return String(n);
+  if (n < 10000) return (n / 1000).toFixed(1) + 'K';
+  return Math.round(n / 1000) + 'K';
+}
+
+function buildMarkerIcon(d) {
+  const cls = ['marker'];
+  if (d.type.includes('보조돔')) cls.push('dome');
+  if (d.type.includes('이동형')) cls.push('mobile');
+  if (overrides[d.no]) cls.push('edited');
+  let bg = DONG_COLOR[d.dong];
+  let size = 30;
+  let label = String(d.no);
+  if (violMode) {
+    const count = (VIOLATIONS[d.no] && VIOLATIONS[d.no].total) || 0;
+    bg = heatColor(count);
+    const logT = count > 0 ? Math.log(count + 1) / Math.log(VIOL_MAX + 1) : 0;
+    size = 28 + Math.round(logT * 34);   // 28 ~ 62px
+    cls.push('viol');
+    label = fmtCount(count);
+  }
+  // 라벨 길이별 폰트 크기 (3자리 이상은 축소)
+  const baseFont = size * 0.4;
+  const fontSize = Math.max(9, Math.round(baseFont * (label.length >= 4 ? 0.7 : label.length === 3 ? 0.82 : 1)));
+  return L.divIcon({
+    className: '',
+    html: `<div class="${cls.join(' ')}" style="background:${bg};width:${size}px;height:${size}px;font-size:${fontSize}px">${label}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  });
+}
+
+const markers = {};
+DATA.forEach(d => {
+  const m = L.marker([d.lat, d.lng], { icon: buildMarkerIcon(d), draggable: false }).addTo(map);
+  m.on('click', () => { if (!editMode) select(d.no); });
+  m.on('dragend', (e) => {
+    const ll = e.target.getLatLng();
+    d.lat = +ll.lat.toFixed(7);
+    d.lng = +ll.lng.toFixed(7);
+    overrides[d.no] = { lat: d.lat, lng: d.lng };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    m.setIcon(buildMarkerIcon(d));
+    updateEditsInfo();
+    if (activeId === d.no) select(d.no);
+  });
+  markers[d.no] = m;
+});
+
+// Stats
+document.getElementById('stat-cho').textContent = DATA.filter(d => d.dong === '초량동').length;
+document.getElementById('stat-su').textContent  = DATA.filter(d => d.dong === '수정동').length;
+document.getElementById('stat-bum').textContent = DATA.filter(d => d.dong === '범일동').length;
+
+// Filter chips
+document.querySelectorAll('.chip.filter').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const k = chip.dataset.key, v = chip.dataset.val;
+    if (filters[k].has(v)) { filters[k].delete(v); chip.classList.remove('on'); }
+    else { filters[k].add(v); chip.classList.add('on'); }
+    render();
+  });
+});
+document.getElementById('reset').addEventListener('click', () => {
+  Object.keys(filters).forEach(k => filters[k].clear());
+  document.querySelectorAll('.chip.filter').forEach(c => c.classList.remove('on'));
+  document.getElementById('search').value = '';
+  searchTerm = '';
+  render();
+});
+
+// 건수 버블 토글
+let heatMapMode = false;
+const violToggle = document.getElementById('viol-toggle');
+const heatToggle = document.getElementById('heat-toggle');
+
+function updateLegend() {
+  const showViol = violMode || heatMapMode;
+  document.getElementById('legend-default').style.display = (showViol || gridMode) ? 'none' : '';
+  document.getElementById('legend-viol').style.display = (showViol && !gridMode) ? '' : 'none';
+  document.getElementById('legend-grid').style.display = gridMode ? '' : 'none';
+}
+
+violToggle.addEventListener('click', () => {
+  violMode = !violMode;
+  violToggle.classList.toggle('on', violMode);
+  DATA.forEach(d => { markers[d.no].setIcon(buildMarkerIcon(d)); });
+  updateLegend();
+  if (activeId) select(activeId);
+});
+
+// 히트맵 토글
+heatToggle.addEventListener('click', () => {
+  heatMapMode = !heatMapMode;
+  heatToggle.classList.toggle('on', heatMapMode);
+  if (heatMapMode) { heatLayer.addTo(map); }
+  else { map.removeLayer(heatLayer); }
+  updateLegend();
+});
+
+// heat 범례 최대값 표시
+document.getElementById('heat-max').textContent = '~' + VIOL_MAX.toLocaleString();
+
+// ── 구역 집계 격자 ──
+let gridMode = false;
+let gridMetric = 'total'; // 'total' | 'avg'
+const gridToggle = document.getElementById('grid-toggle');
+const gridMetricBtn = document.getElementById('grid-metric-btn');
+const gridGroup = L.layerGroup();
+const GRID_STEP = 0.0035; // ~350m 격자
+
+// 등급 분류 색상 (6단계, RdBu diverging)
+const GRID_CLASSES = [
+  { color: '#2166ac', opacity: 0.55, textDark: false },  // 1등급 — 진파랑
+  { color: '#67a9cf', opacity: 0.55, textDark: false },  // 2등급 — 파랑
+  { color: '#d1e5f0', opacity: 0.6,  textDark: true  },  // 3등급 — 연파랑
+  { color: '#fddbc7', opacity: 0.6,  textDark: true  },  // 4등급 — 연빨강
+  { color: '#ef8a62', opacity: 0.65, textDark: false },  // 5등급 — 빨강
+  { color: '#b2182b', opacity: 0.75, textDark: false },  // 6등급 — 진빨강
+];
+let gridBreaks = [];
+
+function calcQuantileBreaks(values, nClasses) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const breaks = [];
+  for (let i = 1; i < nClasses; i++) {
+    const idx = Math.round((i / nClasses) * sorted.length) - 1;
+    breaks.push(sorted[Math.max(0, idx)]);
+  }
+  return breaks;
+}
+
+function getGridClass(val) {
+  for (let i = 0; i < gridBreaks.length; i++) {
+    if (val <= gridBreaks[i]) return i;
+  }
+  return GRID_CLASSES.length - 1;
+}
+
+// 격자 셀 데이터 (한 번만 계산)
+let gridCells = [];
+function calcGridCells() {
+  gridCells = [];
+  const minLat = 35.112, maxLat = 35.143, minLng = 129.035, maxLng = 129.067;
+  for (let lat = minLat; lat < maxLat; lat += GRID_STEP) {
+    for (let lng = minLng; lng < maxLng; lng += GRID_STEP) {
+      let total = 0, cnt = 0;
+      DATA.forEach(d => {
+        if (d.lat >= lat && d.lat < lat + GRID_STEP &&
+            d.lng >= lng && d.lng < lng + GRID_STEP) {
+          total += (VIOLATIONS[d.no] && VIOLATIONS[d.no].total) || 0;
+          cnt++;
+        }
+      });
+      if (total > 0) {
+        gridCells.push({ lat, lng, total, cnt, avg: Math.round(total / cnt) });
+      }
+    }
+  }
+}
+calcGridCells();
+
+function buildGridLayer() {
+  gridGroup.clearLayers();
+  const isAvg = gridMetric === 'avg';
+  const values = gridCells.map(c => isAvg ? c.avg : c.total);
+  gridBreaks = calcQuantileBreaks(values, GRID_CLASSES.length);
+
+  gridCells.forEach(c => {
+    const val = isAvg ? c.avg : c.total;
+    const cls = getGridClass(val);
+    const gc = GRID_CLASSES[cls];
+
+    const rect = L.rectangle(
+      [[c.lat, c.lng], [c.lat + GRID_STEP, c.lng + GRID_STEP]],
+      {
+        color: 'rgba(255,255,255,0.7)', weight: 1.5,
+        fillColor: gc.color,
+        fillOpacity: gc.opacity,
+      }
+    );
+    const avgVal = c.avg.toLocaleString();
+    rect.bindTooltip(
+      `<b>${cls + 1}등급</b> 구역<br>CCTV ${c.cnt}대<br>총 단속 <b>${c.total.toLocaleString()}</b>건<br>대당 평균 <b>${avgVal}</b>건`,
+      { sticky: true, className: '', direction: 'top' }
+    );
+    gridGroup.addLayer(rect);
+
+    // 셀 중앙 라벨
+    const textCls = gc.textDark ? 'grid-label-inner dark-text' : 'grid-label-inner';
+    const displayVal = isAvg ? avgVal : c.total.toLocaleString();
+    const subLabel = isAvg ? `${c.cnt}대 평균` : `${c.cnt}대`;
+    const label = L.marker([c.lat + GRID_STEP / 2, c.lng + GRID_STEP / 2], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="${textCls}">${displayVal}<small>${subLabel}</small></div>`,
+        iconSize: [70, 30],
+        iconAnchor: [35, 15],
+      }),
+      interactive: false,
+    });
+    gridGroup.addLayer(label);
+  });
+
+  updateGridLegend(values);
+}
+
+function updateGridLegend(values) {
+  const isAvg = gridMetric === 'avg';
+  const unit = isAvg ? '건/대' : '건';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const allBreaks = [min - 1, ...gridBreaks, max];
+  const rows = GRID_CLASSES.map((gc, i) => {
+    const lo = Math.round(allBreaks[i] + 1);
+    const hi = i < allBreaks.length - 1 ? Math.round(allBreaks[i + 1]) : max;
+    const rangeLabel = lo === hi
+      ? `${lo.toLocaleString()}`
+      : `${lo.toLocaleString()} ~ ${hi.toLocaleString()}`;
+    return `<div class="lg-row"><span class="lg-swatch" style="background:${gc.color}"></span>${rangeLabel}${unit}</div>`;
+  }).join('');
+  document.getElementById('legend-grid-rows').innerHTML = rows;
+  document.getElementById('legend-grid-title').textContent =
+    isAvg ? 'CCTV 대당 평균 단속' : '구역별 단속 건수';
+  gridMetricBtn.textContent = isAvg ? '▶ 총건수 보기' : '▶ 대당 평균 보기';
+}
+
+buildGridLayer();
+
+// 지표 전환 버튼
+gridMetricBtn.addEventListener('click', () => {
+  gridMetric = gridMetric === 'total' ? 'avg' : 'total';
+  buildGridLayer();
+  if (gridMode && !map.hasLayer(gridGroup)) gridGroup.addTo(map);
+});
+
+gridToggle.addEventListener('click', () => {
+  gridMode = !gridMode;
+  gridToggle.classList.toggle('on', gridMode);
+  if (gridMode) {
+    gridGroup.addTo(map);
+  } else {
+    map.removeLayer(gridGroup);
+  }
+  render();
+  updateLegend();
+});
+
+// CCTV 위치 마커 표시/숨김 토글
+let markerVisible = true;
+const markerToggle = document.getElementById('marker-toggle');
+markerToggle.addEventListener('click', () => {
+  markerVisible = !markerVisible;
+  markerToggle.classList.toggle('on', markerVisible);
+  render();
+});
+
+const editToggle = document.getElementById('edit-toggle');
+function setEditMode(on) {
+  editMode = on;
+  editToggle.classList.toggle('on', on);
+  document.body.classList.toggle('editing', on);
+  Object.values(markers).forEach(m => {
+    if (on) m.dragging.enable();
+    else m.dragging.disable();
+  });
+}
+editToggle.addEventListener('click', () => setEditMode(!editMode));
+
+// 수정 내역 정보 갱신
+function updateEditsInfo() {
+  const n = Object.keys(overrides).length;
+  document.getElementById('edits-count').textContent = n;
+  document.getElementById('edits-info').classList.toggle('show', n > 0);
+}
+
+// HTML 내보내기 — 수정 좌표를 DATA에 베이크한 새 단일 HTML 다운로드
+// 새 빌드는 별도 localStorage 네임스페이스를 사용해 "수정 0건" 초기 상태로 시작
+document.getElementById('export-html').addEventListener('click', (e) => {
+  e.preventDefault();
+  // 내부용 _origLat/_origLng 필드를 제외한 깨끗한 DATA 직렬화
+  const baked = DATA.map(d => {
+    const { _origLat, _origLng, ...rest } = d;
+    return rest;
+  });
+  const newJson = JSON.stringify(baked);
+
+  // 현재 문서를 그대로 가져오기 (script 태그 원문 보존)
+  let html = '<!doctype html>\n' + document.documentElement.outerHTML;
+
+  // 센티넬 사이의 DATA를 새 값으로 교체
+  const dataRe = /\/\*<DATA-START>\*\/[\s\S]*?\/\*<DATA-END>\*\//;
+  if (!dataRe.test(html)) {
+    alert('DATA 센티넬을 찾지 못했습니다. 파일 구조가 변경된 것 같습니다.');
+    return;
+  }
+  html = html.replace(dataRe, '/*<DATA-START>*/' + newJson + '/*<DATA-END>*/');
+
+  // 새 빌드 ID 생성 → localStorage 네임스페이스 분리 → 초기 상태로 시작
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const newBuildId = 'build-' + stamp;
+  const buildRe = /\/\*<BUILD-START>\*\/[\s\S]*?\/\*<BUILD-END>\*\//;
+  if (buildRe.test(html)) {
+    html = html.replace(buildRe, '/*<BUILD-START>*/' + newBuildId + '/*<BUILD-END>*/');
+  }
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ymd = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `CCTV_대시보드_${ymd}.html`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+// CSV 내보내기
+document.getElementById('export-edits').addEventListener('click', (e) => {
+  e.preventDefault();
+  const keys = Object.keys(overrides);
+  if (keys.length === 0) return;
+  const head = ['연번', '지점명', '동', '원본_위도', '원본_경도', '수정_위도', '수정_경도'];
+  const rows = [head];
+  keys.map(k => parseInt(k)).sort((a, b) => a - b).forEach(no => {
+    const d = DATA.find(x => x.no === no);
+    if (!d) return;
+    const o = overrides[no];
+    rows.push([d.no, d.location, d.dong, d._origLat, d._origLng, o.lat, o.lng]);
+  });
+  const csv = '﻿' + rows.map(r =>
+    r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+  ).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ymd = new Date().toISOString().slice(0, 10);
+  a.download = `CCTV_위치수정_${ymd}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+// 전체 초기화
+document.getElementById('reset-edits').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!confirm('수정된 모든 위치를 원본으로 되돌립니다. 계속할까요?')) return;
+  Object.keys(overrides).forEach(k => {
+    const no = parseInt(k);
+    const d = DATA.find(x => x.no === no);
+    if (!d) return;
+    d.lat = d._origLat;
+    d.lng = d._origLng;
+    markers[no].setLatLng([d.lat, d.lng]);
+    markers[no].setIcon(buildMarkerIcon(d));
+  });
+  overrides = {};
+  localStorage.removeItem(STORAGE_KEY);
+  updateEditsInfo();
+  if (activeId) select(activeId);
+});
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  render();
+});
+document.getElementById('sort').addEventListener('change', e => {
+  sortKey = e.target.value;
+  render();
+});
+
+function getFiltered() {
+  return DATA.filter(d => {
+    for (const k of Object.keys(filters)) {
+      if (filters[k].size > 0 && !filters[k].has(String(d[k]))) return false;
+    }
+    if (searchTerm) {
+      const hay = (d.location + ' ' + d.address + ' ' + d.mapName).toLowerCase();
+      if (!hay.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+}
+function getSorted(arr) {
+  const c = [...arr];
+  if (sortKey === 'no') c.sort((a, b) => a.no - b.no);
+  else if (sortKey === 'installed-desc') c.sort((a, b) => b.installed.localeCompare(a.installed));
+  else if (sortKey === 'installed-asc') c.sort((a, b) => a.installed.localeCompare(b.installed));
+  else if (sortKey === 'dong') c.sort((a, b) => a.dong.localeCompare(b.dong, 'ko') || a.no - b.no);
+  return c;
+}
+
+function render() {
+  const filtered = getFiltered();
+  const sorted = getSorted(filtered);
+  const visibleSet = new Set(filtered.map(d => d.no));
+
+  // markers
+  DATA.forEach(d => {
+    if (visibleSet.has(d.no) && markerVisible) {
+      if (!map.hasLayer(markers[d.no])) markers[d.no].addTo(map);
+    } else {
+      if (map.hasLayer(markers[d.no])) map.removeLayer(markers[d.no]);
+    }
+  });
+
+  // count
+  document.getElementById('count').textContent = filtered.length;
+
+  // list
+  const list = document.getElementById('list');
+  list.innerHTML = sorted.map(d => {
+    const cls = d.no === activeId ? 'item active' : 'item';
+    const typeTag = d.type === 'CCTV 보조돔' ? '<span class="tag dome">보조돔</span>' :
+                    d.type === 'CCTV(이동형)' ? '<span class="tag mobile">이동형</span>' : '';
+    return `<div class="${cls}" data-no="${d.no}">
+      <div class="num" style="background:${DONG_COLOR[d.dong]}">${d.no}</div>
+      <div class="body">
+        <div class="name">${escapeHtml(d.location)}</div>
+        <div class="addr">${escapeHtml(d.address)}</div>
+        <div class="tags">
+          <span class="tag">${d.installed}</span>
+          <span class="tag">${escapeHtml(d.vendor)}</span>
+          <span class="tag">방향 ${d.direction}</span>
+          ${typeTag}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.item').forEach(el => {
+    el.addEventListener('click', () => select(parseInt(el.dataset.no)));
+  });
+}
+
+function select(no) {
+  activeId = no;
+  const d = DATA.find(x => x.no === no);
+  if (!d) return;
+
+  map.flyTo([d.lat, d.lng], 17, { duration: 0.6 });
+
+  // highlight marker
+  Object.entries(markers).forEach(([k, m]) => {
+    const el = m.getElement();
+    if (!el) return;
+    const inner = el.querySelector('.marker');
+    if (!inner) return;
+    if (parseInt(k) === no) inner.classList.add('active');
+    else inner.classList.remove('active');
+  });
+
+  // detail card
+  const det = document.getElementById('detail');
+  det.classList.add('show');
+  document.getElementById('d-num').textContent = d.no;
+  document.getElementById('d-num').style.background = DONG_COLOR[d.dong];
+  document.getElementById('d-name').textContent = d.location;
+  document.getElementById('d-dong').textContent = `${d.dong} · ${d.type}`;
+  const fields = [
+    ['지점명(지도)', d.mapName],
+    ['주소', d.address],
+    ['좌표', `${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}`],
+    ['관리업체', d.vendor],
+    ['단속방향', d.direction + '방향'],
+    ['최초설치', d.installed],
+  ];
+  if (d.changedDate) fields.push(['변경일자', `${d.changedDate} (${d.changedType})`]);
+  if (d.note) fields.push(['비고', d.note]);
+
+  // 단속 통계
+  const v = VIOLATIONS[d.no];
+  let violHtml = '';
+  if (v && v.total > 0) {
+    const violLines = Object.entries(v.violations || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `<span class="v-pill">${escapeHtml(k)} <b>${n.toLocaleString()}</b></span>`).join('');
+    const matchLines = Object.entries(v.matchMethods || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `<span class="v-pill match-${k.charAt(0)}">${escapeHtml(k)} <b>${n.toLocaleString()}</b></span>`).join('');
+    violHtml = `
+      <div class="viol-section">
+        <div class="viol-total">총 단속 <b>${v.total.toLocaleString()}</b> 건</div>
+        <div class="viol-row">${violLines}</div>
+        <div class="viol-row mute">${matchLines}</div>
+      </div>`;
+  } else {
+    violHtml = `<div class="viol-section empty">단속 데이터 없음</div>`;
+  }
+
+  document.getElementById('d-body').innerHTML = fields.map(([k, v]) =>
+    `<div class="field"><div class="k">${k}</div><div class="v">${escapeHtml(String(v))}</div></div>`
+  ).join('') + violHtml;
+
+  document.getElementById('d-roadview').href = `https://map.kakao.com/link/roadview/${d.lat},${d.lng}`;
+
+  // highlight list
+  document.querySelectorAll('.item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.no) === no);
+  });
+}
+
+document.getElementById('d-close').addEventListener('click', () => {
+  document.getElementById('detail').classList.remove('show');
+  activeId = null;
+  document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.marker').forEach(el => el.classList.remove('active'));
+});
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+render();
+updateEditsInfo();
+</script>
+</body>
+</html>
